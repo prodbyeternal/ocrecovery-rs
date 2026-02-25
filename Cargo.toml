@@ -1,0 +1,17 @@
+[package]
+name = "ocrecovery"
+version = "0.1.0"
+edition = "2021"
+description = "macOS recovery downloader — recovery for the 21st century"
+authors = ["prodbyeternal (Rust port)"]
+
+[[bin]]
+name = "ocrecovery"
+path = "src/main.rs"
+
+[dependencies]
+ratatui  = "0.28"
+crossterm = "0.27"
+reqwest  = { version = "0.12", features = ["blocking"] }
+sha2     = "0.10"
+num-bigint = "0.4"
