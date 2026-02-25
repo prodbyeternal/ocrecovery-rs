@@ -1,8 +1,8 @@
 // ocrecovery – recovery for the 21st century
-// made with <3 by prodbyeternal for ThinkDifferentInc.
+// made with <3 by prodbyeternal @ ThinkDifferentInc.
 // huge thank you to acidanthera for leading the way of vanilla hackintoshing! :D
 //
-// Rust port — all original macrecovery logic preserved.
+// rust port woooohoooo
 
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
@@ -28,9 +28,7 @@ use std::{
     time::Duration,
 };
 
-// ────────────────────────────────────────────────────────────
-// Constants  (og macrecovery values, untouched)
-// ────────────────────────────────────────────────────────────
+// macrecovery constants
 
 const MLB_ZERO: &str = "00000000000000000";
 const TYPE_SID: usize = 16;
@@ -46,7 +44,7 @@ const REQUIRED_KEYS: &[&str] = &["AP", "AU", "AH", "AT", "CU", "CH", "CT"];
 
 const OUT_DIR: &str = "com.apple.recovery.boot";
 
-/// Apple EFI ROM RSA-2048 public key modulus (little-endian hex, original Python constant).
+/// public apple efi rom rsa-2048 public key
 const APPLE_EFI_ROM_KEY_HEX: &str =
     "C3E748CAD9CD384329E10E25A91E43E1A762FF529ADE578C935BDDF9B13F2179\
      D4855E6FC89E9E29CA12517D17DFA1EDCE0BEBF0EA7B461FFE61D94E2BDF72C1\
@@ -57,9 +55,8 @@ const APPLE_EFI_ROM_KEY_HEX: &str =
      A3F62E6D6905E1CD57732410A3EB0C6B4DEFDABE9F59BF1618758C751CD56CEF8\
      51D1C0EAA1C558E37AC108DA9089863D20E2E7E4BF475EC66FE6B3EFDCF";
 
-// ────────────────────────────────────────────────────────────
-// macOS version definitions  (ported from Python VERSIONS list)
-// ────────────────────────────────────────────────────────────
+// macOS version definitions
+
 
 #[derive(Clone)]
 struct MacOSVersion {
@@ -89,9 +86,7 @@ fn versions() -> Vec<MacOSVersion> {
     ]
 }
 
-// ────────────────────────────────────────────────────────────
-// Shared download-progress state
-// ────────────────────────────────────────────────────────────
+// shared download-progress state
 
 #[derive(Default, Clone)]
 struct DownloadProgress {
@@ -114,9 +109,8 @@ struct DownloadProgress {
 
 type SharedProgress = Arc<Mutex<DownloadProgress>>;
 
-// ────────────────────────────────────────────────────────────
-// Pseudo-random ID generator  (mirrors Python generate_id)
-// ────────────────────────────────────────────────────────────
+
+// pseudo random id gen
 
 fn generate_id(len: usize) -> String {
     use std::time::SystemTime;
@@ -139,9 +133,8 @@ fn generate_id(len: usize) -> String {
         .collect()
 }
 
-// ────────────────────────────────────────────────────────────
-// Apple Recovery HTTP helpers
-// ────────────────────────────────────────────────────────────
+
+// internetrecovery spoof - headers and cookies
 
 type AnyError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -176,7 +169,6 @@ fn get_image_info(
     let k   = generate_id(TYPE_K);
     let fg  = generate_id(TYPE_FG);
 
-    // Body is newline-separated key=value pairs, exactly as in Python
     let body = format!(
         "cid={}\nsn={}\nbid={}\nk={}\nfg={}\nos={}",
         cid, mlb, bid, k, fg, os_type
@@ -208,7 +200,7 @@ fn get_image_info(
     Ok(info)
 }
 
-/// Extract hostname from a plain http(s) URL string.
+/// extract hostname from a plain http/s url string
 fn url_hostname(url: &str) -> &str {
     let s = url
         .trim_start_matches("https://")
@@ -216,12 +208,12 @@ fn url_hostname(url: &str) -> &str {
     s.split('/').next().unwrap_or("")
 }
 
-/// Extract last path component from a URL.
+// extract last path component from a URL.
 fn url_filename(url: &str) -> &str {
     url.split('/').last().unwrap_or("download")
 }
 
-/// Stream-download `url` to `out_dir`, calling `on_progress(downloaded, total_or_0)` each chunk.
+/// stream-download `url` to `out_dir` calling `on_progress(downloaded, total_or_0)` each chunk
 fn save_image(
     client:      &reqwest::blocking::Client,
     url:         &str,
@@ -260,19 +252,17 @@ fn save_image(
     Ok(filepath)
 }
 
-// ────────────────────────────────────────────────────────────
-// Chunklist & image verification  (original Python logic)
-// ────────────────────────────────────────────────────────────
 
-/// Parses the chunklist at `cnk_path`, verifies the RSA-2048 (or hash) signature,
-/// and returns `Vec<(chunk_size, expected_sha256)>`.
+// chinklist verifir
+
+/// im parsing the chunklist at `cnk_path` and verifying the RSA-2048/hash signature.
+
 fn verify_chunklist(cnk_path: &Path) -> Result<Vec<(u32, [u8; 32])>, AnyError> {
     let data = fs::read(cnk_path)?;
     if data.len() < 36 {
         return Err("Chunklist file too small".into());
     }
 
-    // ── Header: little-endian layout <4sIBBBxQQQ> (36 bytes = 0x24) ──
     let magic            = &data[0..4];
     let header_size      = u32::from_le_bytes(data[4..8].try_into()?);
     let file_version     = data[8];
@@ -292,7 +282,7 @@ fn verify_chunklist(cnk_path: &Path) -> Result<Vec<(u32, [u8; 32])>, AnyError> {
     if chunk_offset != 0x24                                { return Err("Unexpected chunk offset".into()); }
     if signature_offset != 0x24 + 36 * chunk_count        { return Err("Unexpected signature offset".into()); }
 
-    // ── Hash header + all chunk records ──
+    // hash header and chunk records
     let mut hasher = Sha256::new();
     hasher.update(&data[..36]);
 
@@ -314,7 +304,7 @@ fn verify_chunklist(cnk_path: &Path) -> Result<Vec<(u32, [u8; 32])>, AnyError> {
 
     match signature_method {
         1 => {
-            // RSA-2048 PKCS#1 v1.5 verification  (mirrors Python pow(sig, 0x10001, modulus))
+            // rsa verification
             if pos + 256 > data.len() { return Err("Missing RSA signature bytes".into()); }
             let sig_bytes = &data[pos..pos + 256];
 
@@ -325,10 +315,6 @@ fn verify_chunklist(cnk_path: &Path) -> Result<Vec<(u32, [u8; 32])>, AnyError> {
 
             let result = signature.modpow(&exponent, &modulus);
 
-            // Build expected PKCS#1 DigestInfo padded value:
-            // 0x1 + 0xff*202 + DigestInfo_header + sha256_of_header_and_chunks
-            // Python: int(f'0x1{"f"*404}003031300d060960864801650304020105000420{"0"*64}', 16)
-            //         | int.from_bytes(digest, 'big')
             let ff_part   = "f".repeat(404);
             let zero_part = "0".repeat(64);
             let template_hex = format!(
@@ -345,12 +331,10 @@ fn verify_chunklist(cnk_path: &Path) -> Result<Vec<(u32, [u8; 32])>, AnyError> {
             }
         }
         2 => {
-            // Method 2: raw SHA-256 — matches Python logic (also raises RuntimeError)
             if pos + 32 > data.len() { return Err("Missing hash signature bytes".into()); }
             if &data[pos..pos + 32] != digest.as_slice() {
                 return Err("Hash verification failed".into());
             }
-            // Python also raises here: "Chunklist missing digital signature"
             return Err("Chunklist missing digital signature".into());
         }
         _ => unreachable!(),
@@ -359,7 +343,7 @@ fn verify_chunklist(cnk_path: &Path) -> Result<Vec<(u32, [u8; 32])>, AnyError> {
     Ok(chunks)
 }
 
-/// Verify every chunk of `dmg_path` against the chunklist at `cnk_path`.
+/// verify every chunk of `dmg_path` against the chunklist at `cnk_path`
 fn verify_image(
     dmg_path:    &Path,
     cnk_path:    &Path,
@@ -382,7 +366,7 @@ fn verify_image(
         }
     }
 
-    // Make sure there's no extra data after the last chunk
+    // make sure theres no extra data
     let mut extra = [0u8; 1];
     if file.read(&mut extra)? != 0 {
         return Err("Image is larger than chunklist expects".into());
@@ -391,9 +375,7 @@ fn verify_image(
     Ok(())
 }
 
-// ────────────────────────────────────────────────────────────
-// High-level download orchestrator (runs in its own thread)
-// ────────────────────────────────────────────────────────────
+// downloader on its own thread
 
 fn log(prog: &SharedProgress, msg: impl Into<String>) {
     prog.lock().unwrap().log.push(msg.into());
@@ -419,7 +401,7 @@ fn do_download(version: &MacOSVersion, prog: &SharedProgress) -> Result<(), AnyE
     let info = get_image_info(&client, &session, version.build, version.model, version.os_type)?;
     log(prog, format!("Product: {}", info.get("AP").map(|s| s.as_str()).unwrap_or("?")));
 
-    // ── Chunklist ──
+    // chin list
     set_phase(prog, "Downloading chunklist…");
     let sign_link = info[INFO_SIGN_LINK].clone();
     let sign_sess = info[INFO_SIGN_SESS].clone();
@@ -432,7 +414,7 @@ fn do_download(version: &MacOSVersion, prog: &SharedProgress) -> Result<(), AnyE
     })?;
     log(prog, format!("Chunklist saved → {}", cnk_path.display()));
 
-    // ── DMG ──
+    // damage file LMAO
     set_phase(prog, "Downloading BaseSystem.dmg…");
     let image_link = info[INFO_IMAGE_LINK].clone();
     let image_sess = info[INFO_IMAGE_SESS].clone();
@@ -445,7 +427,7 @@ fn do_download(version: &MacOSVersion, prog: &SharedProgress) -> Result<(), AnyE
     })?;
     log(prog, format!("DMG saved → {}", dmg_path.display()));
 
-    // ── Verification ──
+    // verification process
     set_phase(prog, "Verifying image integrity…");
     let prog_c = prog.clone();
     verify_image(&dmg_path, &cnk_path, move |chunk, total| {
@@ -475,9 +457,8 @@ fn run_download(version: MacOSVersion, prog: SharedProgress) {
     }
 }
 
-// ────────────────────────────────────────────────────────────
-// TUI Application state
-// ────────────────────────────────────────────────────────────
+
+// tui app state
 
 enum Screen {
     Menu,
@@ -537,14 +518,12 @@ impl App {
     }
 }
 
-// ────────────────────────────────────────────────────────────
-// TUI rendering
-// ────────────────────────────────────────────────────────────
+// tui render
 
 fn header_widget() -> Paragraph<'static> {
     Paragraph::new(vec![
         Line::from(vec![
-            Span::styled("ocrecovery", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            Span::styled("ocrecovery-rs", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             Span::raw("  "),
             Span::styled("•", Style::default().fg(Color::Green)),
             Span::raw("  recovery for the 21st century"),
@@ -673,7 +652,7 @@ fn draw_download(frame: &mut Frame, app: &App, version_name: &str) {
 
     frame.render_widget(header_widget(), chunks[0]);
 
-    // Version being downloaded
+    // version thats downloaded
     let ver_para = Paragraph::new(format!(" Downloading: {version_name}"))
         .style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
         .block(
@@ -683,7 +662,7 @@ fn draw_download(frame: &mut Frame, app: &App, version_name: &str) {
         );
     frame.render_widget(ver_para, chunks[1]);
 
-    // Chunklist gauge
+    // chinklist gauge
     let cnk_label = if prog.cnk_total > 0 {
         format!("{} / {}", fmt_bytes(prog.cnk_downloaded), fmt_bytes(prog.cnk_total))
     } else {
@@ -696,7 +675,7 @@ fn draw_download(frame: &mut Frame, app: &App, version_name: &str) {
         .percent(pct(prog.cnk_downloaded, prog.cnk_total));
     frame.render_widget(cnk_gauge, chunks[2]);
 
-    // DMG gauge
+    // dmgg gauge
     let dmg_label = if prog.dmg_total > 0 {
         format!("{} / {}", fmt_bytes(prog.dmg_downloaded), fmt_bytes(prog.dmg_total))
     } else {
@@ -709,7 +688,7 @@ fn draw_download(frame: &mut Frame, app: &App, version_name: &str) {
         .percent(pct(prog.dmg_downloaded, prog.dmg_total));
     frame.render_widget(dmg_gauge, chunks[3]);
 
-    // Verification gauge
+    // verification gauge
     let ver_label = if prog.verify_total > 0 {
         format!("Chunk {}/{}", prog.verify_chunk, prog.verify_total)
     } else {
@@ -726,7 +705,7 @@ fn draw_download(frame: &mut Frame, app: &App, version_name: &str) {
         });
     frame.render_widget(ver_gauge, chunks[4]);
 
-    // Status
+    // status
     let (status_text, status_style) = if let Some(err) = &prog.error {
         (
             format!("✖  {err}"),
@@ -749,7 +728,7 @@ fn draw_download(frame: &mut Frame, app: &App, version_name: &str) {
         .block(Block::default().title(" Status ").borders(Borders::ALL));
     frame.render_widget(status, chunks[5]);
 
-    // Log
+    // log
     let log_items: Vec<ListItem> = prog
         .log
         .iter()
@@ -763,7 +742,7 @@ fn draw_download(frame: &mut Frame, app: &App, version_name: &str) {
     );
     frame.render_widget(log_list, chunks[6]);
 
-    // Footer
+    // foot
     let footer_text = if prog.finished {
         " Press q to quit "
     } else {
@@ -780,9 +759,8 @@ fn draw_download(frame: &mut Frame, app: &App, version_name: &str) {
     frame.render_widget(footer, chunks[7]);
 }
 
-// ────────────────────────────────────────────────────────────
-// Entry point
-// ────────────────────────────────────────────────────────────
+
+// entry point
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
