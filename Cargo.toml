@@ -3,10 +3,10 @@ name = "ocrecovery"
 version = "0.1.0"
 edition = "2021"
 description = "macOS recovery downloader — recovery for the 21st century"
-authors = ["prodbyeternal (Rust port)"]
+authors = ["prodbyeternal"]
 
 [[bin]]
-name = "ocrecovery"
+name = "ocrecovery-rs"
 path = "src/main.rs"
 
 [dependencies]
