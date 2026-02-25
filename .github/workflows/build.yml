@@ -92,7 +92,7 @@ jobs:
           - name: macOS (Apple Silicon)
             os: macos-latest
             target: aarch64-apple-darwin
-            artifact: ocrecoveryr-rs
+            artifact: ocrecovery-rs
             asset_name: ocrecovery-rs-macos-aarch64
 
           - name: Windows (x86_64)
