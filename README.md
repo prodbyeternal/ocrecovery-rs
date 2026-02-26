@@ -1,4 +1,7 @@
-# ocrecovery-rs
+<h1>
+  <img src="ocr-rs.png" alt="ocr-rs logo" width="40" align="left" style="margin-right:10px;" />
+  ocrecovery-rs
+</h1>
 
 ocrecovery-rs is a experimental port of ocrecovery.py from Python to Rust.
 
