@@ -144,6 +144,7 @@ fn get_session(client: &reqwest::blocking::Client) -> Result<String, AnyError> {
         .header("Host", "osrecovery.apple.com")
         .header("Connection", "close")
         .header("User-Agent", "InternetRecovery/1.0")
+        .header("Accept-Encoding", "identity")
         .send()?;
 
     for (name, value) in resp.headers() {
@@ -181,6 +182,7 @@ fn get_image_info(
         .header("User-Agent", "InternetRecovery/1.0")
         .header("Cookie", session)
         .header("Content-Type", "text/plain")
+        .header("Accept-Encoding", "identity")
         .body(body)
         .send()?;
 
@@ -234,6 +236,7 @@ fn save_image(
         .header("Connection", "close")
         .header("User-Agent", "InternetRecovery/1.0")
         .header("Cookie", &cookie)
+        .header("Accept-Encoding", "identity")
         .send()?;
 
     let total      = resp.content_length().unwrap_or(0);
@@ -391,6 +394,9 @@ fn do_download(version: &MacOSVersion, prog: &SharedProgress) -> Result<(), AnyE
 
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(60))
+        .no_gzip()
+        .no_deflate()
+        .no_zstd()
         .build()?;
 
     set_phase(prog, "Fetching session cookie…");
