@@ -3,7 +3,7 @@
   ocrecovery-rs
 </h1>
 
-ocrecovery-rs is a experimental port of ocrecovery.py from Python to Rust.
+ocrecovery-rs is a experimental port of [ocrecovery.py](https://github.com/ThinkDifferentInc/ocrecovery) from Python to Rust.
 
 # why consider a rust port?
 
